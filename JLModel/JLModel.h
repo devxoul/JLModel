@@ -36,5 +36,6 @@
 
 - (id)initWithDictionary:(NSDictionary *)keyedValues;
 - (void)clear;
+- (NSDate *)parseDateString:(NSString *)dateString forField:(NSString *)field;
 
 @end

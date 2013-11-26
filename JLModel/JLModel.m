@@ -25,12 +25,6 @@
 
 - (void)setValuesForKeysWithDictionary:(NSDictionary *)keyedValues
 {
-	NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
-	dateFormatter.dateFormat = @"yyyy-MM-dd' 'HH:mm:ss";
-//	dateFormatter.timeZone = [NSTimeZone timeZoneWithName:@"UTC"];
-	dateFormatter.timeZone = [NSTimeZone localTimeZone];
-	dateFormatter.locale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US"];
-
     NSArray *properties = self.properties;
 	for( Property *property in properties )
 	{
@@ -49,7 +43,7 @@
 		}
 		
 		else if( property.type == NSDate.class ) {
-			value = [dateFormatter dateFromString:value];
+            value = [self parseDateString:value forField:property.name];
 		}
 		
 		else if( [property.type isSubclassOfClass:JLModel.class] ) {
@@ -154,6 +148,19 @@
     }
 	
     return properties;
+}
+
+
+#pragma mark -
+#pragma mark Abstract
+
+- (NSDate *)parseDateString:(NSString *)dateString forField:(NSString *)field
+{
+    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+	dateFormatter.dateFormat = @"yyyy-MM-dd' 'HH:mm:ss";
+	dateFormatter.timeZone = [NSTimeZone localTimeZone];
+	dateFormatter.locale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US"];
+    return [dateFormatter dateFromString:dateString];
 }
 
 @end
