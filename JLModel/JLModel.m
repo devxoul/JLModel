@@ -25,6 +25,7 @@
 
 - (void)setValuesForKeysWithDictionary:(NSDictionary *)keyedValues
 {
+    NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
     NSArray *properties = self.properties;
 	for( Property *property in properties )
 	{
@@ -39,7 +40,7 @@
 		}
 		
 		else if( property.type == NSNumber.class && [value isKindOfClass:NSString.class] ) {
-			value = [value numberFromString:value];
+			value = [numberFormatter numberFromString:value];
 		}
 		
 		else if( property.type == NSDate.class ) {
