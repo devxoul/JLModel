@@ -11,6 +11,24 @@
 
 
 @implementation Property
+
+- (NSString *)description
+{
+    if( self.protocols ) {
+        NSMutableString *protocolDescription = [NSMutableString stringWithString:@"<"];
+        for( NSString *protocol in self.protocols ) {
+            [protocolDescription appendString:protocol];
+            if( self.protocols.lastObject != protocol ) {
+                [protocolDescription appendString:@", "];
+            }
+        }
+        [protocolDescription appendString:@">"];
+        return [NSString stringWithFormat:@"<Property: %@%@ *%@>", self.type, protocolDescription, self.name];
+    }
+    
+    return [NSString stringWithFormat:@"<Property: %@ *%@>", self.type, self.name];
+}
+
 @end
 
 

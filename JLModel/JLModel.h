@@ -17,8 +17,8 @@
 #define Boolean Integer
 #define String @property (nonatomic, strong) NSString *
 #define Date @property (nonatomic, strong) NSDate *
-#define Array @property (nonatomic, strong) NSArray *
-#define ToMany(__className) @property (nonatomic, strong) NSArray<__className> *
+#define Array @property (nonatomic, strong) NSMutableArray *
+#define ToMany(__className) @property (nonatomic, strong) NSMutableArray<__className> *
 #define ToOne(__className) @property (nonatomic, strong) __className *
 
 @interface Property : NSObject
