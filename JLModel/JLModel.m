@@ -69,7 +69,7 @@
 			value = [[property.type alloc] initWithDictionary:value];
 		}
 		
-		else if( property.type == NSArray.class )
+		else if( property.type == NSArray.class || property.type == NSMutableArray.class )
 		{
 			if( ![value count] ) {
 				continue;
