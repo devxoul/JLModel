@@ -32,6 +32,8 @@
 
 @interface JLModel : NSObject
 
+@property (nonatomic, strong) id id;
+
 @property (nonatomic, readonly) NSArray *properties;
 
 - (id)initWithDictionary:(NSDictionary *)keyedValues;

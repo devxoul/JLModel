@@ -182,4 +182,12 @@
     return [dateFormatter dateFromString:dateString];
 }
 
+- (BOOL)isEqual:(id)object
+{
+    if ([object isKindOfClass:[JLModel class]]) {
+        return [self.id isEqual:[(JLModel *)object id]];
+    }
+    return [super isEqual:object];
+}
+
 @end
