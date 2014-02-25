@@ -116,9 +116,14 @@
         id value = [keyedValues objectForKey:property.name];
 
         if (!value || [value isEqual:[NSNull null]]) {
-            // use default value for array.
-            if (property.type == NSArray.class || property.type == NSMutableArray.class) {
-                value = [[property.type alloc] init];
+            // use default value for array if existing value is nil.
+            if ((property.type == NSArray.class || property.type == NSMutableArray.class) &&
+                ![self valueForKey:property.name]) {
+                Class class = property.type;
+                for (NSString *protocolName in property.protocols) {
+                    class_addProtocol(class, NSProtocolFromString(protocolName));
+                }
+                value = [[class alloc] init];
             } else {
                 continue;
             }
