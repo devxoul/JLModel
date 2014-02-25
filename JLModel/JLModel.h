@@ -26,6 +26,7 @@
 @property (nonatomic, strong) NSString *name;
 @property (nonatomic, strong) Class type;
 @property (nonatomic, strong) NSArray *protocols;
+@property (nonatomic, assign) BOOL readonly;
 
 @end
 

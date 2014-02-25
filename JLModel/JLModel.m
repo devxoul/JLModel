@@ -109,13 +109,22 @@
     NSArray *properties = self.properties;
     for (Property *property in properties)
     {
-        id value = [keyedValues objectForKey:property.name];
-
-        if (!value || [value isEqual:[NSNull null]]) {
+        if (property.readonly) {
             continue;
         }
 
-        if (property.type == NSString.class && [value isKindOfClass:NSNumber.class]) {
+        id value = [keyedValues objectForKey:property.name];
+
+        if (!value || [value isEqual:[NSNull null]]) {
+            // use default value for array.
+            if (property.type == NSArray.class || property.type == NSMutableArray.class) {
+                value = [[property.type alloc] init];
+            } else {
+                continue;
+            }
+        }
+
+        else if (property.type == NSString.class && [value isKindOfClass:NSNumber.class]) {
             value = [value stringValue];
         }
 
@@ -137,7 +146,7 @@
         {
             // no model type definition
             if (![value count]) {
-                continue;
+                value = [NSMutableArray array];
             }
 
             Class elementClass = nil;
@@ -192,6 +201,7 @@
         for (int j = 0; j < attrCount; j++) {
             objc_property_attribute_t attr = attrs[j];
             if (!strcmp(attr.name, "T")) {
+                // e.g. @"NSString", @"NSNumber", @"NSMutableArray<User>"(ToMany), @"User"(ToOne)
                 type = [NSString stringWithUTF8String:attr.value];
                 break;
             }
@@ -199,13 +209,19 @@
 
         Property *p = [[Property alloc] init];
         p.name = [NSString stringWithUTF8String:property_getName(property)];
+
+        const char *propertyAttributes = property_getAttributes(property);
+        NSArray *attributes = [[NSString stringWithUTF8String:propertyAttributes] componentsSeparatedByString:@","];
+        if ([attributes containsObject:@"R"]) {
+            p.readonly = YES;
+        }
+
         if ([type isEqualToString:@"@"]) {
             p.type = nil;
         } else {
             if ([type rangeOfString:@"@"].location == NSNotFound) {
                 continue;
             }
-
             NSString *classString = nil;
             NSInteger length = [type rangeOfString:@"<"].location;
             if (length == NSNotFound) {
@@ -215,6 +231,7 @@
             p.type = NSClassFromString(classString);
         }
 
+        // detect relation model type from protocol
         NSCharacterSet *charSet = [NSCharacterSet characterSetWithCharactersInString:@"<>"];
         NSArray *components = [type componentsSeparatedByCharactersInSet:charSet];
         NSMutableArray *protocols = nil;
