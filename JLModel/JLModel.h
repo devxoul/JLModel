@@ -31,7 +31,7 @@
 @end
 
 
-@interface JLModel : NSObject
+@interface JLModel : NSObject <NSCopying>
 
 @property (nonatomic, strong) id id;
 

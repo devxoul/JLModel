@@ -273,4 +273,18 @@
     return [super isEqual:object];
 }
 
+- (id)copy
+{
+    JLModel *newObj = [[[self class] alloc] init];
+    for (Property *property in self.properties) {
+        if (property.readonly) {
+            continue;
+        }
+        id value = [[self valueForKey:property.name] copy];
+        NSLog(@"copy: %@=%@", property.name, value);
+        [newObj setValue:value forKey:property.name];
+    }
+    return newObj;
+}
+
 @end
