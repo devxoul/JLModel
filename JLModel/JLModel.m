@@ -118,11 +118,7 @@
         if (!value || [value isEqual:[NSNull null]]) {
             // use default value for array if existing value is nil.
             if ([property.type isSubclassOfClass:[NSArray class]] && ![self valueForKey:property.name]) {
-                Class class = property.type;
-                for (NSString *protocolName in property.protocols) {
-                    class_addProtocol(class, NSProtocolFromString(protocolName));
-                }
-                value = [[class alloc] init];
+                value = [[property.type alloc] init];
             } else {
                 continue;
             }
@@ -146,7 +142,7 @@
         }
 
         // ToMany
-        else if (property.type == NSArray.class || property.type == NSMutableArray.class)
+        else if ([property.type isSubclassOfClass:[NSArray class]])
         {
             // no model type definition
             if (![value count]) {
