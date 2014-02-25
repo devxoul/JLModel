@@ -39,6 +39,7 @@
 
 + (id)modelWithID:(id)id;
 + (id)modelWithDictionary:(NSDictionary *)dictionary;
++ (void)updateObject:(JLModel *)obj;
 + (void)delete:(JLModel *)model;
 
 - (id)initWithDictionary:(NSDictionary *)keyedValues;

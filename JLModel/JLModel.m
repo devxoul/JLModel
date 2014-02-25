@@ -84,6 +84,11 @@
     return model;
 }
 
++ (void)updateObject:(JLModel *)obj
+{
+    [[[self class] models] setObject:obj forKey:obj.id];
+}
+
 + (void)delete:(JLModel *)model
 {
     [[[self class] models] removeObjectForKey:model.id];
