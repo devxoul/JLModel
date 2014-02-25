@@ -117,8 +117,7 @@
 
         if (!value || [value isEqual:[NSNull null]]) {
             // use default value for array if existing value is nil.
-            if ((property.type == NSArray.class || property.type == NSMutableArray.class) &&
-                ![self valueForKey:property.name]) {
+            if ([property.type isSubclassOfClass:[NSArray class]] && ![self valueForKey:property.name]) {
                 Class class = property.type;
                 for (NSString *protocolName in property.protocols) {
                     class_addProtocol(class, NSProtocolFromString(protocolName));
