@@ -14,11 +14,11 @@
 
 - (NSString *)description
 {
-    if( self.protocols ) {
+    if (self.protocols) {
         NSMutableString *protocolDescription = [NSMutableString stringWithString:@"<"];
-        for( NSString *protocol in self.protocols ) {
+        for (NSString *protocol in self.protocols) {
             [protocolDescription appendString:protocol];
-            if( self.protocols.lastObject != protocol ) {
+            if (self.protocols.lastObject != protocol) {
                 [protocolDescription appendString:@", "];
             }
         }
@@ -45,50 +45,50 @@
 {
     NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
     NSArray *properties = self.properties;
-	for( Property *property in properties )
+	for (Property *property in properties)
 	{
 		id value = [keyedValues objectForKey:property.name];
 		
-		if( !value || [value isEqual:[NSNull null]] ) {
+		if (!value || [value isEqual:[NSNull null]]) {
 			continue;
 		}
 		
-		if( property.type == NSString.class && [value isKindOfClass:NSNumber.class] ) {
+		if (property.type == NSString.class && [value isKindOfClass:NSNumber.class]) {
 			 value = [value stringValue];
 		}
 		
-		else if( property.type == NSNumber.class && [value isKindOfClass:NSString.class] ) {
+		else if (property.type == NSNumber.class && [value isKindOfClass:NSString.class]) {
 			value = [numberFormatter numberFromString:value];
 		}
 		
-		else if( property.type == NSDate.class ) {
+		else if (property.type == NSDate.class) {
             value = [self parseDateString:value forField:property.name];
 		}
 		
-		else if( [property.type isSubclassOfClass:JLModel.class] ) {
+		else if ([property.type isSubclassOfClass:JLModel.class]) {
 			value = [[property.type alloc] initWithDictionary:value];
 		}
 		
-		else if( property.type == NSArray.class || property.type == NSMutableArray.class )
+		else if (property.type == NSArray.class || property.type == NSMutableArray.class)
 		{
-			if( ![value count] ) {
+			if (![value count]) {
 				continue;
 			}
 			
 			Class elementClass = nil;
-			for( NSString *protocol in property.protocols ) {
-				Class protocolClass = NSClassFromString( protocol );
-				if( [protocolClass isSubclassOfClass:JLModel.class] ) {
+			for (NSString *protocol in property.protocols) {
+				Class protocolClass = NSClassFromString(protocol);
+				if ([protocolClass isSubclassOfClass:JLModel.class]) {
 					elementClass = protocolClass;
 					break;
 				}
 			}
 			
-			if( !elementClass ) {
+			if (!elementClass) {
 				value = value;
 			} else {
 				NSMutableArray *elements = [NSMutableArray array];
-				for( NSDictionary *dict in value ) {
+				for (NSDictionary *dict in value) {
 					JLModel *elem = [[elementClass alloc] initWithDictionary:dict];
 					[elements addObject:elem];
 				}
@@ -103,29 +103,30 @@
 - (void)clear
 {
 	NSArray *properties = self.properties;
-	for( Property *property in properties )
+	for (Property *property in properties)
 	{
 		[self setValue:nil forKey:property.name];
 	}
 }
 
+/**
+ * Returns all properties.
+ */
 - (NSArray *)properties
 {
     NSMutableArray *properties = [[NSMutableArray alloc] init];
     unsigned int propertyCount = 0;
     objc_property_t *propertyList = class_copyPropertyList(self.class, &propertyCount);
     
-    for( unsigned int i = 0; i < propertyCount; i++ )
-	{
+    for (int i = 0; i < propertyCount; i++) {
         objc_property_t property = propertyList[i];
         
 		NSString *type = nil;
 		unsigned int attrCount = 0;
 		objc_property_attribute_t *attrs = property_copyAttributeList(property, &attrCount);
-		for( int j = 0; j < attrCount; j++ )
-		{
+		for (int j = 0; j < attrCount; j++) {
 			objc_property_attribute_t attr = attrs[j];
-			if( !strcmp( attr.name, "T" ) ) {
+			if (!strcmp(attr.name, "T")) {
 				type = [NSString stringWithUTF8String:attr.value];
 				break;
 			}
@@ -133,29 +134,29 @@
 		
 		Property *p = [[Property alloc] init];
 		p.name = [NSString stringWithUTF8String:property_getName(property)];
-		if( [type isEqualToString:@"@"] ) {
+		if ([type isEqualToString:@"@"]) {
 			p.type = nil;
 		} else {
-			if( [type rangeOfString:@"@"].location == NSNotFound ) {
+			if ([type rangeOfString:@"@"].location == NSNotFound) {
 				continue;
 			}
 			
 			NSString *classString = nil;
 			NSInteger length = [type rangeOfString:@"<"].location;
-			if( length == NSNotFound ) {
+			if (length == NSNotFound) {
 				length = type.length - 1;
 			}
 			classString = [type substringWithRange:NSMakeRange(2, length - 2)];
-			p.type = NSClassFromString( classString );
+			p.type = NSClassFromString(classString);
 		}
-		
-		
-		NSArray *components = [[type componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"<>"]] mutableCopy];
+
+        NSCharacterSet *charSet = [NSCharacterSet characterSetWithCharactersInString:@"<>"];
+		NSArray *components = [type componentsSeparatedByCharactersInSet:charSet];
 		NSMutableArray *protocols = nil;
-		for( NSInteger j = 1; j < components.count - 1; j++ ) {
+		for (NSInteger j = 1; j < components.count - 1; j++) {
 			NSString *component = [components objectAtIndex:j];
-			if( component.length ) {
-				if( !protocols ) {
+			if (component.length) {
+				if (!protocols) {
 					protocols = [NSMutableArray array];
 				}
 				[protocols addObject:component];
