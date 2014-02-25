@@ -265,6 +265,11 @@
     return [dateFormatter dateFromString:dateString];
 }
 
+- (NSString *)description
+{
+    return [NSString stringWithFormat:@"<%@: %@>", [self class].description, self.id];
+}
+
 - (BOOL)isEqual:(id)object
 {
     if ([object isKindOfClass:[JLModel class]]) {
@@ -281,7 +286,6 @@
             continue;
         }
         id value = [[self valueForKey:property.name] copy];
-        NSLog(@"copy: %@=%@", property.name, value);
         [newObj setValue:value forKey:property.name];
     }
     return newObj;
