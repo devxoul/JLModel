@@ -36,6 +36,10 @@
 
 @property (nonatomic, readonly) NSArray *properties;
 
++ (id)modelWithID:(id)id;
++ (id)modelWithDictionary:(NSDictionary *)dictionary;
++ (void)delete:(JLModel *)model;
+
 - (id)initWithDictionary:(NSDictionary *)keyedValues;
 - (void)clear;
 - (NSDate *)parseDateString:(NSString *)dateString forField:(NSString *)field;

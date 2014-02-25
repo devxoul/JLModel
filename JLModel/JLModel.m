@@ -9,7 +9,6 @@
 #import "JLModel.h"
 #import <objc/runtime.h>
 
-
 @implementation Property
 
 - (NSString *)description
@@ -25,7 +24,7 @@
         [protocolDescription appendString:@">"];
         return [NSString stringWithFormat:@"<Property: %@%@ *%@>", self.type, protocolDescription, self.name];
     }
-    
+
     return [NSString stringWithFormat:@"<Property: %@ *%@>", self.type, self.name];
 }
 
@@ -34,79 +33,145 @@
 
 @implementation JLModel
 
+
+#pragma mark -
+#pragma mark Flyweight
+
+/**
+ * Returns model dictionary for this class.
+ */
++ (NSMutableDictionary *)models
+{
+    static NSMutableDictionary *store = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        store = [NSMutableDictionary dictionary];
+    });
+
+    NSNumber *hash = [NSNumber numberWithUnsignedLong:[self class].hash];
+    NSMutableDictionary *models = store[hash];
+    if (!models) {
+        models = [NSMutableDictionary dictionary];
+        store[hash] = models;
+    }
+    return models;
+}
+
++ (id)modelWithID:(id)id
+{
+    // create and return new instance if model has no id
+    if (!id) {
+        return [[[self class] alloc] init];
+    }
+
+    NSMutableDictionary *models = [[self class] models];
+    JLModel *model = models[id];
+    if (!model) {
+        NSLog(@"Create: <%@:%@>", [self class].description, id);
+        model = [[[self class] alloc] init];
+        models[id] = model;
+    } else {
+        NSLog(@"Reuse: <%@:%@>", [self class].description, id);
+    }
+    return model;
+}
+
++ (id)modelWithDictionary:(NSDictionary *)dictionary
+{
+    id id = dictionary[@"id"];
+    JLModel *model = [[self class] modelWithID:id];
+    [model setValuesForKeysWithDictionary:dictionary];
+    return model;
+}
+
++ (void)delete:(JLModel *)model
+{
+    [[[self class] models] removeObjectForKey:model.id];
+}
+
+
+#pragma mark -
+#pragma mark Constructor
+
 - (id)initWithDictionary:(NSDictionary *)keyedValues
 {
-	self = [super init];
-	[self setValuesForKeysWithDictionary:keyedValues];
-	return self;
+    self = [super init];
+    [self setValuesForKeysWithDictionary:keyedValues];
+    return self;
 }
+
+
+#pragma mark -
 
 - (void)setValuesForKeysWithDictionary:(NSDictionary *)keyedValues
 {
     NSNumberFormatter *numberFormatter = [[NSNumberFormatter alloc] init];
     NSArray *properties = self.properties;
-	for (Property *property in properties)
-	{
-		id value = [keyedValues objectForKey:property.name];
-		
-		if (!value || [value isEqual:[NSNull null]]) {
-			continue;
-		}
-		
-		if (property.type == NSString.class && [value isKindOfClass:NSNumber.class]) {
-			 value = [value stringValue];
-		}
-		
-		else if (property.type == NSNumber.class && [value isKindOfClass:NSString.class]) {
-			value = [numberFormatter numberFromString:value];
-		}
-		
-		else if (property.type == NSDate.class) {
+    for (Property *property in properties)
+    {
+        id value = [keyedValues objectForKey:property.name];
+
+        if (!value || [value isEqual:[NSNull null]]) {
+            continue;
+        }
+
+        if (property.type == NSString.class && [value isKindOfClass:NSNumber.class]) {
+            value = [value stringValue];
+        }
+
+        else if (property.type == NSNumber.class && [value isKindOfClass:NSString.class]) {
+            value = [numberFormatter numberFromString:value];
+        }
+
+        else if (property.type == NSDate.class) {
             value = [self parseDateString:value forField:property.name];
-		}
-		
-		else if ([property.type isSubclassOfClass:JLModel.class]) {
-			value = [[property.type alloc] initWithDictionary:value];
-		}
-		
-		else if (property.type == NSArray.class || property.type == NSMutableArray.class)
-		{
-			if (![value count]) {
-				continue;
-			}
-			
-			Class elementClass = nil;
-			for (NSString *protocol in property.protocols) {
-				Class protocolClass = NSClassFromString(protocol);
-				if ([protocolClass isSubclassOfClass:JLModel.class]) {
-					elementClass = protocolClass;
-					break;
-				}
-			}
-			
-			if (!elementClass) {
-				value = value;
-			} else {
-				NSMutableArray *elements = [NSMutableArray array];
-				for (NSDictionary *dict in value) {
-					JLModel *elem = [[elementClass alloc] initWithDictionary:dict];
-					[elements addObject:elem];
-				}
-				value = elements;
-			}
-		}
-		
-		[self setValue:value forKey:property.name];
-	}
+        }
+
+        // ToOne
+        else if ([property.type isSubclassOfClass:JLModel.class]) {
+            value = [property.type modelWithDictionary:value];
+        }
+
+        // ToMany
+        else if (property.type == NSArray.class || property.type == NSMutableArray.class)
+        {
+            // no model type definition
+            if (![value count]) {
+                continue;
+            }
+
+            Class elementClass = nil;
+            for (NSString *protocol in property.protocols) {
+                Class protocolClass = NSClassFromString(protocol);
+                if ([protocolClass isSubclassOfClass:JLModel.class]) {
+                    elementClass = protocolClass;
+                    break;
+                }
+            }
+
+            if (!elementClass) {
+                value = value;
+            } else {
+                NSMutableArray *elements = [NSMutableArray array];
+                for (NSDictionary *dict in value) {
+                    JLModel *elem = [elementClass modelWithDictionary:dict];
+                    [elements addObject:elem];
+                }
+                value = elements;
+            }
+        }
+
+        [self setValue:value forKey:property.name];
+    }
 }
 
 - (void)clear
 {
-	NSArray *properties = self.properties;
-	for (Property *property in properties)
-	{
-		[self setValue:nil forKey:property.name];
-	}
+    NSArray *properties = self.properties;
+    for (Property *property in properties)
+    {
+        [self setValue:nil forKey:property.name];
+    }
 }
 
 /**
@@ -117,56 +182,56 @@
     NSMutableArray *properties = [[NSMutableArray alloc] init];
     unsigned int propertyCount = 0;
     objc_property_t *propertyList = class_copyPropertyList(self.class, &propertyCount);
-    
+
     for (int i = 0; i < propertyCount; i++) {
         objc_property_t property = propertyList[i];
-        
-		NSString *type = nil;
-		unsigned int attrCount = 0;
-		objc_property_attribute_t *attrs = property_copyAttributeList(property, &attrCount);
-		for (int j = 0; j < attrCount; j++) {
-			objc_property_attribute_t attr = attrs[j];
-			if (!strcmp(attr.name, "T")) {
-				type = [NSString stringWithUTF8String:attr.value];
-				break;
-			}
-		}
-		
-		Property *p = [[Property alloc] init];
-		p.name = [NSString stringWithUTF8String:property_getName(property)];
-		if ([type isEqualToString:@"@"]) {
-			p.type = nil;
-		} else {
-			if ([type rangeOfString:@"@"].location == NSNotFound) {
-				continue;
-			}
-			
-			NSString *classString = nil;
-			NSInteger length = [type rangeOfString:@"<"].location;
-			if (length == NSNotFound) {
-				length = type.length - 1;
-			}
-			classString = [type substringWithRange:NSMakeRange(2, length - 2)];
-			p.type = NSClassFromString(classString);
-		}
+
+        NSString *type = nil;
+        unsigned int attrCount = 0;
+        objc_property_attribute_t *attrs = property_copyAttributeList(property, &attrCount);
+        for (int j = 0; j < attrCount; j++) {
+            objc_property_attribute_t attr = attrs[j];
+            if (!strcmp(attr.name, "T")) {
+                type = [NSString stringWithUTF8String:attr.value];
+                break;
+            }
+        }
+
+        Property *p = [[Property alloc] init];
+        p.name = [NSString stringWithUTF8String:property_getName(property)];
+        if ([type isEqualToString:@"@"]) {
+            p.type = nil;
+        } else {
+            if ([type rangeOfString:@"@"].location == NSNotFound) {
+                continue;
+            }
+
+            NSString *classString = nil;
+            NSInteger length = [type rangeOfString:@"<"].location;
+            if (length == NSNotFound) {
+                length = type.length - 1;
+            }
+            classString = [type substringWithRange:NSMakeRange(2, length - 2)];
+            p.type = NSClassFromString(classString);
+        }
 
         NSCharacterSet *charSet = [NSCharacterSet characterSetWithCharactersInString:@"<>"];
-		NSArray *components = [type componentsSeparatedByCharactersInSet:charSet];
-		NSMutableArray *protocols = nil;
-		for (NSInteger j = 1; j < components.count - 1; j++) {
-			NSString *component = [components objectAtIndex:j];
-			if (component.length) {
-				if (!protocols) {
-					protocols = [NSMutableArray array];
-				}
-				[protocols addObject:component];
-			}
-		}
-		
-		p.protocols = protocols;
-		[properties addObject:p];
+        NSArray *components = [type componentsSeparatedByCharactersInSet:charSet];
+        NSMutableArray *protocols = nil;
+        for (NSInteger j = 1; j < components.count - 1; j++) {
+            NSString *component = [components objectAtIndex:j];
+            if (component.length) {
+                if (!protocols) {
+                    protocols = [NSMutableArray array];
+                }
+                [protocols addObject:component];
+            }
+        }
+
+        p.protocols = protocols;
+        [properties addObject:p];
     }
-	
+
     return properties;
 }
 
@@ -177,9 +242,9 @@
 - (NSDate *)parseDateString:(NSString *)dateString forField:(NSString *)field
 {
     NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
-	dateFormatter.dateFormat = @"yyyy-MM-dd' 'HH:mm:ss";
-	dateFormatter.timeZone = [NSTimeZone localTimeZone];
-	dateFormatter.locale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US"];
+    dateFormatter.dateFormat = @"yyyy-MM-dd' 'HH:mm:ss";
+    dateFormatter.timeZone = [NSTimeZone localTimeZone];
+    dateFormatter.locale = [[NSLocale alloc] initWithLocaleIdentifier:@"en_US"];
     return [dateFormatter dateFromString:dateString];
 }
 
