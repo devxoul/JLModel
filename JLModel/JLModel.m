@@ -64,14 +64,15 @@
         return [[[self class] alloc] init];
     }
 
+    if ([id isKindOfClass:[NSNumber class]]) {
+        id = [NSString stringWithFormat:@"%@", id];
+    }
+
     NSMutableDictionary *models = [[self class] models];
     JLModel *model = models[id];
     if (!model) {
-        NSLog(@"Create: <%@:%@>", [self class].description, id);
         model = [[[self class] alloc] init];
         models[id] = model;
-    } else {
-        NSLog(@"Reuse: <%@:%@>", [self class].description, id);
     }
     return model;
 }
@@ -123,7 +124,7 @@
         if (!value || [value isEqual:[NSNull null]]) {
             // use default value for array if existing value is nil.
             if ([property.type isSubclassOfClass:[NSArray class]] && ![self valueForKey:property.name]) {
-                value = [[property.type alloc] init];
+                value = [NSMutableArray array];
             } else {
                 continue;
             }
@@ -290,7 +291,13 @@
         if (property.readonly) {
             continue;
         }
-        id value = [[self valueForKey:property.name] copy];
+        id value = [self valueForKey:property.name];
+        id copiedValue = nil;
+        if ([value respondsToSelector:@selector(mutableCopyWithZone:)]) {
+            copiedValue = [value mutableCopy];
+        } else {
+            copiedValue = [value copy];
+        }
         [newObj setValue:value forKey:property.name];
     }
     return newObj;
