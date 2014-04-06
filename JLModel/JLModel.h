@@ -34,15 +34,19 @@
 @interface JLModel : NSObject
 
 @property (nonatomic, strong) id id;
+@property (nonatomic, readonly) id<NSObject, NSCopying> identifier;
++ (id<NSObject, NSCopying>)identifierForDictionary:(NSDictionary *)dictionary;
 
 @property (nonatomic, readonly) NSArray *properties;
 
-+ (id)modelWithID:(id)id;
++ (id)modelWithIdentifier:(id<NSObject, NSCopying>)identifier;
 + (id)modelWithDictionary:(NSDictionary *)dictionary;
-+ (void)updateObject:(JLModel *)obj;
++ (void)update:(JLModel *)obj;
 + (void)delete:(JLModel *)model;
++ (void)truncate;
 
 - (id)initWithDictionary:(NSDictionary *)keyedValues;
+- (void)updateWithModel:(JLModel *)model;
 - (void)clear;
 - (NSDate *)parseDateString:(NSString *)dateString forField:(NSString *)field;
 

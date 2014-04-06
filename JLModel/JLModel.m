@@ -37,16 +37,22 @@
 #pragma mark -
 #pragma mark Flyweight
 
-/**
- * Returns model dictionary for this class.
- */
-+ (NSMutableDictionary *)models
++ (NSMutableDictionary *)store
 {
     static NSMutableDictionary *store = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         store = [NSMutableDictionary dictionary];
     });
+    return store;
+}
+
+/**
+ * Returns model dictionary for this class.
+ */
++ (NSMutableDictionary *)models
+{
+    NSMutableDictionary *store = [JLModel store];
 
     NSNumber *hash = [NSNumber numberWithUnsignedLong:[self class].hash];
     NSMutableDictionary *models = store[hash];
@@ -57,42 +63,53 @@
     return models;
 }
 
-+ (id)modelWithID:(id)id
++ (id)modelWithIdentifier:(id<NSObject, NSCopying>)identifier
 {
     // create and return new instance if model has no id
-    if (!id) {
+    if (!identifier) {
         return [[[self class] alloc] init];
     }
 
-    if ([id isKindOfClass:[NSNumber class]]) {
-        id = [NSString stringWithFormat:@"%@", id];
+    if ([identifier isKindOfClass:[NSNumber class]]) {
+        identifier = [NSString stringWithFormat:@"%@", identifier];
     }
 
     NSMutableDictionary *models = [[self class] models];
-    JLModel *model = models[id];
+    JLModel *model = models[identifier];
     if (!model) {
         model = [[[self class] alloc] init];
-        models[id] = model;
+        models[identifier] = model;
     }
     return model;
 }
 
 + (id)modelWithDictionary:(NSDictionary *)dictionary
 {
-    id id = dictionary[@"id"];
-    JLModel *model = [[self class] modelWithID:id];
+    id identifier = [[self class] identifierForDictionary:dictionary];
+    JLModel *model = [[self class] modelWithIdentifier:identifier];
     [model setValuesForKeysWithDictionary:dictionary];
     return model;
 }
 
-+ (void)updateObject:(JLModel *)obj
++ (void)update:(JLModel *)obj
 {
-    [[[self class] models] setObject:obj forKey:obj.id];
+    [[[self class] models] setObject:obj forKey:obj.identifier];
 }
 
 + (void)delete:(JLModel *)model
 {
-    [[[self class] models] removeObjectForKey:model.id];
+    [[[self class] models] removeObjectForKey:model.identifier];
+}
+
++ (void)truncate
+{
+    if ([self class] == [JLModel class]) {
+        NSMutableDictionary *store = [JLModel store];
+        [store removeAllObjects];
+    } else {
+        NSMutableDictionary *models = [[self class] models];
+        [models removeAllObjects];
+    }
 }
 
 
@@ -279,7 +296,7 @@
 - (BOOL)isEqual:(id)object
 {
     if ([object isKindOfClass:[JLModel class]]) {
-        return [self.id isEqual:[(JLModel *)object id]];
+        return [self.identifier isEqual:[(JLModel *)object identifier]];
     }
     return [super isEqual:object];
 }
@@ -298,9 +315,43 @@
         } else {
             copiedValue = [value copy];
         }
-        [newObj setValue:value forKey:property.name];
+        [newObj setValue:copiedValue forKey:property.name];
     }
     return newObj;
+}
+
+- (id<NSObject, NSCopying>)identifier
+{
+    if ([self.id isKindOfClass:[NSNumber class]]) {
+        return [NSString stringWithFormat:@"%@", self.id];
+    }
+    return self.id;
+}
+
++ (id<NSObject, NSCopying>)identifierForDictionary:(NSDictionary *)dictionary
+{
+    id id = dictionary[@"id"];
+    if ([id isKindOfClass:[NSNumber class]]) {
+        return [NSString stringWithFormat:@"%@", id];
+    }
+    return id;
+}
+
+- (void)updateWithModel:(JLModel *)model
+{
+    for (Property *property in self.properties) {
+        if (property.readonly) {
+            break;
+        }
+        id value = [model valueForKey:property.name];
+        id copiedValue = nil;
+        if ([value respondsToSelector:@selector(mutableCopyWithZone:)]) {
+            copiedValue = [value mutableCopy];
+        } else {
+            copiedValue = [value copy];
+        }
+        [self setValue:copiedValue forKey:property.name];
+    }
 }
 
 @end
