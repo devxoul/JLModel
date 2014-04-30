@@ -103,7 +103,6 @@
 
     NSMutableDictionary *models = [[self class] models];
     JLModel *model = models[identifier];
-    NSLog(@"model: %@", model);
     return model != nil;
 }
 
