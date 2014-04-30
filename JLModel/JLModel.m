@@ -91,6 +91,22 @@
     return model;
 }
 
++ (BOOL)existsForIdentifier:(id<NSObject, NSCopying>)identifier
+{
+    if (!identifier) {
+        return NO;
+    }
+
+    if ([identifier isKindOfClass:[NSNumber class]]) {
+        identifier = [NSString stringWithFormat:@"%@", identifier];
+    }
+
+    NSMutableDictionary *models = [[self class] models];
+    JLModel *model = models[identifier];
+    NSLog(@"model: %@", model);
+    return model != nil;
+}
+
 + (void)update:(JLModel *)obj
 {
     [[[self class] models] setObject:obj forKey:obj.identifier];

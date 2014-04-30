@@ -41,6 +41,7 @@
 
 + (id)modelWithIdentifier:(id<NSObject, NSCopying>)identifier;
 + (id)modelWithDictionary:(NSDictionary *)dictionary;
++ (BOOL)existsForIdentifier:(id<NSObject, NSCopying>)identifier;
 + (void)update:(JLModel *)obj;
 + (void)delete:(JLModel *)model;
 + (void)truncate;
